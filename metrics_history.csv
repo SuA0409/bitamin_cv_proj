@@ -1,0 +1,5 @@
+calibration,aliked_w,mega_w,eva_w,mean_confidence,uncertainty,new_ratio,reliability_score,rank1,mAP,f1_score
+isotonic,60,20,20,0.2834,0.4581,0.703,0.2376,0.0,0.0,0.0
+isotonic,20,60,20,0.2695,0.5131,0.7916,0.2182,0.0,0.0,0.0
+isotonic,20,20,60,0.2259,0.459,0.8286,0.18,0.0,0.0,0.0
+isotonic,70,15,15,0.2955,0.44,0.6899,0.2515,0.0,0.0,0.0

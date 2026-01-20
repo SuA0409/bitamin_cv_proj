@@ -4,9 +4,7 @@ import os
 '''
     define your root directory
 '''
-ROOT = './dataset'
-
- 
+ROOT = r"C:\Users\user\Desktop\leesua\animalcleft2025\data"
 
 # Model settings
 MEGAD_NAME = 'hf-hub:BVRA/MegaDescriptor-L-384'

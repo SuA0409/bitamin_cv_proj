@@ -22,18 +22,12 @@ def load_datasets(root, calibration_size=1000):
     AnimalCLEF2025.get_data(root)
     # Apply rotation transform for SalamanderID2025 samples during dataset loading
     dataset = AnimalCLEF2025(root, load_label=True, transform=salamander_orientation_transform)
-
-    dataset.metadata["path"] = dataset.metadata.apply(
-        lambda row: f"processed/{row['split']}/{row['image_id']}.png", axis=1
-    )
     
     dataset_database = dataset.get_subset(dataset.metadata['split'] == 'database')
     dataset_query = dataset.get_subset(dataset.metadata['split'] == 'query')
 
-    calib_meta = dataset_database.metadata[:calibration_size].copy()
-    calib_meta["path"] = calib_meta.apply(
-        lambda row: f"processed/database/{row['image_id']}.png", axis=1
-    )
+    calib_meta = dataset_database.metadata.iloc[:calibration_size].copy()
+    
     dataset_calibration = AnimalCLEF2025(
         root, df=calib_meta, load_label=True, transform=salamander_orientation_transform
     )
@@ -43,28 +37,34 @@ def load_datasets(root, calibration_size=1000):
 
 # Return database and query datasets split by species
 def load_datasets_by_species(root, calibration_size=1000):
-    dataset = AnimalCLEF2025(root, load_label=True)
+    # 모든 종을 포함하는 전체 데이터셋 로드
+    dataset = AnimalCLEF2025(root, load_label=True, transform=salamander_orientation_transform)
 
     species_groups = {}
+    # 메타데이터에 있는 모든 종(dataset 명칭)에 대해 루프
     for dataset_name in dataset.metadata['dataset'].unique():
         is_dataset = dataset.metadata['dataset'] == dataset_name
+
+        # 해당 종의 DB와 Query 필터링
         db_df = dataset.metadata[is_dataset & (dataset.metadata['split'] == 'database')]
-        print(f"[INFO] Dataset: {dataset_name} | Total DB samples: {len(db_df)}")
         query_df = dataset.metadata[is_dataset & (dataset.metadata['split'] == 'query')]
 
-        '''
-        calib의 역할
-        * db에서 일정 개수만 샘플링한 부분집합
-        * 유사도 score가 어느 정도면 믿을 수 있는지 학습하기 위한 용도
-        * 현 코드에선 matcher의 점수 보정용으로 사용
-        * validation dataset과 유사한 역할
-        '''
-        calib_df = db_df.sample(n=min(calibration_size, len(db_df)), random_state=42)
-        db_df = db_df.drop(calib_df.index)
-        dataset_db = AnimalCLEF2025(root, df=db_df, load_label=True)
-        dataset_query = AnimalCLEF2025(root, df=query_df, load_label=True)
+        if len(db_df) == 0:
+            continue
+        
+        print(f"[INFO] Dataset: {dataset_name} | Total DB samples: {len(db_df)}")
 
-        dataset_calib = AnimalCLEF2025(root, df=calib_df, load_label=True)
+        # Calibration 데이터 샘플링
+        calib_df = db_df.sample(n=min(calibration_size, len(db_df)), random_state=42)
+        
+        # 가중치 실험을 위해 DB에서 calib 샘플을 제외할 수도 있고, 포함할 수도 있음
+        # 일단은 중복 없이 분리하는 기존 방식을 유지
+        db_df_remain = db_df.drop(calib_df.index)
+
+        # 개별 종에 대한 데이터셋 객체 생성
+        dataset_db = AnimalCLEF2025(root, df=db_df_remain, load_label=True, transform=salamander_orientation_transform)
+        dataset_query = AnimalCLEF2025(root, df=query_df, load_label=True, transform=salamander_orientation_transform)
+        dataset_calib = AnimalCLEF2025(root, df=calib_df, load_label=True, transform=salamander_orientation_transform)
 
         species_groups[dataset_name] = {
             'db': dataset_db,
